@@ -378,7 +378,8 @@ void * DetourCreateRemoteWow64(void * hProcess, bool createTramp)
             ULONG64 Wow64cpu = (ULONG64)scl::Wow64GetModuleHandle64(hProcess, L"wow64cpu.dll");
             if (Wow64cpu == 0 || Wow64cpu > (ULONG32)Wow64cpu) // wow64cpu.dll should always be below 4GB
             {
-                MessageBoxA(nullptr, "Failed to obtain address of wow64cpu.dll!", "ScyllaHide", MB_ICONERROR);
+                printf("Failed to obtain address of wow64cpu.dll!\n");
+                //MessageBoxA(nullptr, "Failed to obtain address of wow64cpu.dll!", "ScyllaHide", MB_ICONERROR);
                 return nullptr;
             }
 

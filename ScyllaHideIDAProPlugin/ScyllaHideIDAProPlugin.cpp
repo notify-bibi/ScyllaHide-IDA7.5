@@ -246,13 +246,17 @@ static ssize_t idaapi debug_mainloop(void *user_data, int notif_code, va_list va
 
     case dbg_process_exit:
     {
+#ifdef BUILD_IDA_32BIT
+        if (!isAttach)
+        {
+#else
         if (!isAttach && dbg->is_remote())
         {
+#endif
             if (!SendEventToServer(notif_code, ProcessId))
             {
                 g_log.LogError(L"SendEventToServer failed");
             }
-
             CloseServerSocket();
         }
         ProcessId = 0;
@@ -273,11 +277,11 @@ do_remote_libload:
         }
         else if (!isAttach)
         {
+#ifdef BUILD_IDA_32BIT
+            goto do_remote_libload;
+#endif
             if (bHooked)
             {
-#ifdef BUILD_IDA_32BIT
-                goto do_remote_libload;
-#endif
                 startInjection(ProcessId, &g_hdd, g_scyllaHideDllPath.c_str(), false);
             }
         }
