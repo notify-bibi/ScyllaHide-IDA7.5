@@ -1,0 +1,524 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[english]{isodate}
+\usepackage[parfill]{parskip}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+
+
+\lstdefinestyle{customc}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=leftline,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=9pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{black}, % the style that is used for the line-numbers
+}
+
+\lstset{escapechar=@,style=customc}
+\hypersetup{
+  colorlinks   = true,    % Colours links instead of ugly boxes
+  urlcolor     = black,    % Colour for external hyperlinks
+  linkcolor    = black,    % Colour of internal links
+  citecolor    = red      % Colour of citations
+}
+
+\title{ScyllaHide v1.4 - Documentation}
+\author{}
+\date{2019-05-17}
+
+\begin{document}
+
+
+\maketitle
+ 
+\pagenumbering{Roman}
+\tableofcontents
+\listoffigures
+\lstlistoflistings
+
+\newpage
+\pagenumbering{arabic}
+
+\section{Description}
+
+ScyllaHide is an advanced open-source x64/x86 usermode Anti-Anti-Debug library. It hooks various functions in usermode to hide debugging. This tool is intended to stay in usermode (ring3). If you need kernelmode (ring0) Anti-Anti-Debug please see \href{https://github.com/mrexodia/TitanHide}{TitanHide}. ScyllaHide hooks as stealthily as possible in usermode and the goal is to not interfere with any other functionality.
+
+ScyllaHide supports various debuggers with plugins:
+\begin{itemize}
+\item OllyDbg v1 and v2 \url{http://www.ollydbg.de}
+\item x64dbg \url{http://x64dbg.com} or \url{https://github.com/x64dbg/x64dbg}
+\item Hex-Rays IDA v6 \url{https://www.hex-rays.com/products/ida}
+\item TitanEngine v2 \url{https://bitbucket.org/mrexodia/titanengine-update} and \url{http://www.reversinglabs.com/open-source/titanengine.html}
+\end{itemize}
+
+PE x64 debugging is fully supported with plugins for x64dbg and IDA.
+
+Please note: ScyllaHide is not limited to these debuggers. You can use the standalone commandline version of ScyllaHide. You can inject ScyllaHide in any process debugged by any debugger.
+
+\section{Usage Information}
+\subsection{Standalone (debugger-independent)}
+InjectorCLI.exe "process name" "HookLibrary.dll path" [nowait]
+
+InjectorCLI.exe pid:\textit{process ID} "HookLibrary.dll path" [nowait]
+
+For example:
+InjectorCLI.exe crackme.exe \path{C:\HookLibrary.dll}
+
+The injector waits for a keystroke after injection by default. You can modify this behaviour by passing "nowait" (without quotes) as the last parameter.
+
+\subsection{OllyDbg v1}
+Copy scylla\_hide.ini, HookLibraryx86.dll and ScyllaHideOlly1.dll to your specific plugins directory.
+
+\subsection{OllyDbg v2}
+Copy scylla\_hide.ini, HookLibraryx86.dll and ScyllaHideOlly2.dll to your specific plugins directory.
+
+\subsection{IDA v6}
+\textbf{32-bit:}
+Copy scylla\_hide.ini, HookLibraryx86.dll and ScyllaHideIDA.plw to your IDA plugins directory.
+
+\textbf{64-bit:}
+Copy scylla\_hide.ini, HookLibraryx64.dll, ScyllaHideIDASrvx64.exe and ScyllaHideIDA.p64 to your IDA plugins directory.
+
+Note: \\Start ScyllaHideIDASrvx64.exe to debug 64bit applications remotely. \\Start ScyllaHideIDASrvx86.exe to debug 32bit applications remotely.
+
+Command line: ScyllaHideIDASrvxXX.exe <port>\\
+For example: ScyllaHideIDASrvxXX.exe 1345
+
+ScyllaHideIDASrv needs HookLibraryxXX.dll.
+
+\subsection{x64dbg}
+\textbf{32-bit:}
+Copy scylla\_hide.ini, HookLibraryx86.dll and ScyllaHideX64DBGPlugin.dp32 to your \path{\x32\plugins\} directory.
+
+\textbf{64-bit:}
+Copy scylla\_hide.ini, HookLibraryx64.dll and ScyllaHideX64DBGPlugin.dp64 to your \path{\x64\plugins\} directory.
+
+\subsection{TitanEngine}
+\textbf{32-bit:}
+Copy scylla\_hide.ini, HookLibraryx86.dll and ScyllaHideTEx86.dll to your \path{\plugins\x86\} directory.
+
+\textbf{64-bit:}
+Copy scylla\_hide.ini, HookLibraryx64.dll and ScyllaHideTEx64.dll to your \path{\plugins\x64\} directory.
+
+\section{Features}
+
+\subsection{Anti-Anti-Debug}
+
+\subsubsection{Process Environment Block (PEB)}
+The most important anti-anti-debug option. Almost every protector checks for PEB values. There are three important options and one minor option.
+\begin{itemize}
+\item BeingDebugged: Very important option, should always be enabled. \textit{IsDebuggerPresent} uses this value to check for debuggers.
+\item NtGlobalFlag: Very important option, a lot of protectors check this value.
+\item HeapFlags: Very important option. E.g. Themida checks for heap artifacts and heap flags.
+\item StartupInfo: This is not really important, only a few protectors check for this. Maybe Enigma checks it.
+\item OsBuildNumber: VMProtect checks this on newer versions of Windows 10 (2019 onwards).
+\end{itemize}
+
+\subsubsection{NtSetInformationThread}
+\label{sec:NtSetInformationThread_section}
+The THREADINFOCLASS value ThreadHideFromDebugger (17) is a well-known anti-debug measurement. The debugger cannot handle hidden threads. This leads to a loss of control over the target.
+
+\subsubsection{NtSetInformationProcess}
+\label{sec:NtSetInformationProcess_section}
+The PROCESSINFOCLASS value ProcessHandleTracing (32) can be used to detect a debugger. The PROCESSINFOCLASS value ProcessBreakOnTermination (29) can be used to generate a Blue Screen of Death on process termination. ScyllaHide protects from both. The function \textit{RtlSetProcessIsCritical} from ntdll.dll uses ProcessBreakOnTermination internally.
+
+\subsubsection{NtQuerySystemInformation}
+The SYSTEM\_INFORMATION\_CLASS value SystemKernelDebuggerInformation (35) can be used to detect kernel debuggers. The SYSTEM\_INFORMATION\_CLASS value SystemProcessInformation (5) is used to get a process list. A debugger should be hidden in a process list and the debugee should have a good parent process ID like the ID from explorer.exe.
+
+\subsubsection{NtQueryInformationProcess}
+A very important option. Various PROCESSINFOCLASS values can be used to detect a debugger:
+\begin{itemize}
+\item ProcessDebugFlags (31): Should return 1 in the supplied buffer, unless this value was previously set to PROCESS\_DEBUG\_INHERIT (0x1), then 0.
+\item ProcessDebugPort (7): Should return 0 in the supplied buffer.
+\item ProcessDebugObjectHandle (30): Should write 0 to the supplied buffer, close the debug object handle, and return the error STATUS\_PORT\_NOT\_SET (0xC0000353).
+\item ProcessBasicInformation (0): Reveals the parent process ID.
+\item ProcessBreakOnTermination (29): Please see \textit{NtSetInformationProcess} in Section~\ref{sec:NtSetInformationProcess_section}.
+\item ProcessHandleTracing (32): Please see \textit{NtSetInformationProcess} in Section~\ref{sec:NtSetInformationProcess_section}.
+\end{itemize}
+A lot of protectors use this function to detect debuggers. The windows API \textit{CheckRemoteDebuggerPresent} uses \textit{NtQueryInformationProcess} with ProcessDebugPort internally.
+
+\subsubsection{NtQueryObject}
+The OBJECT\_INFORMATION\_CLASS ObjectTypesInformation (3) and ObjectTypeInformation (2) can be used to detect debuggers. ScyllaHide filters DebugObject references.
+
+\subsubsection{NtYieldExecution}
+A very unrealiable anti-debug method. This is only used in some UnpackMe's or in some Proof of Concept code. Only activate this if you really need it. Probably you will never need this option. This function is used in the kernel32.dll \textit{SwitchToThread} function.
+
+\begin{lstlisting}[language=C, caption=SwitchToThread Implementation]
+BOOL __stdcall SwitchToThread()
+{
+  //STATUS_NO_YIELD_PERFORMED 0x40000024
+  return NtYieldExecution() != 0x40000024;
+}
+\end{lstlisting}
+
+\subsubsection{NtCreateThreadEx}
+Threads hidden from debuggers can be created with a special creation flag THREAD\_CREATE\_FLAGS\_HIDE\_FROM\_DEBUGGER (4). ScyllaHide doesn't allow hidden threads. The anti-debug effect is similar to \textit{NtSetInformationThread} in Section~\ref{sec:NtSetInformationThread_section}.
+
+\subsubsection{OutputDebugStringA (deprecated since v1.3)}
+\textit{OutputDebugStringW} uses \textit{OutputDebugStringA} internally, so hooking the ANSI version is enough. This is a very unreliable anti-debug method, so you will not need this option very often. The Listing shows the implementation of the function. The recent versions of ScyllaHide don't need this hook anymore, because they handle the DBG\_PRINTEXCEPTION\_C exception. See Section~\ref{sec:RaiseException_section}.
+
+\begin{lstlisting}[language=C, caption=OutputDebugStringA Implementation]
+void __stdcall OutputDebugStringA(LPCSTR lpOutputString)
+{
+     ULONG_PTR args[2];
+     args[0] = (ULONG_PTR)strlen(lpOutputString);
+     args[1] = (ULONG_PTR)lpOutputString;
+     RaiseException(0x40010006, 0, 2, args);//DBG_PRINTEXCEPTION_C
+}
+\end{lstlisting}
+
+\subsubsection{NtUserBlockInput}
+Very effective anti-debug method. This is used e.g. in Yoda's Protector. "Blocks keyboard and mouse input events from reaching applications."
+
+\subsubsection{NtUserFindWindowEx}
+This is a system call function in user32.dll. The windows APIs \textit{FindWindowA/W} and \textit{FindWindowExA/W} call this internally. The debugger window will be hidden.
+
+\subsubsection{NtUserBuildHwndList}
+This is a system call function in user32.dll. The windows APIs \textit{EnumWindows} and \textit{EnumThreadWindows} call this internally. The debugger window will be hidden.
+
+\subsubsection{NtUserQueryWindow}
+This is a system call function in user32.dll. The windows API \textit{GetWindowThreadProcessId} calls this internally, see Listing for implementation. This is used to hide the debugger process.
+
+\begin{lstlisting}[language=C, caption=GetWindowThreadProcessId Implementation]
+DWORD __stdcall GetWindowThreadProcessId(HWND hWnd, LPDWORD lpdwProcessId)
+{
+	if (lpdwProcessId != 0)
+		*lpdwProcessId = (DWORD)NtUserQueryWindow(hwnd, WindowProcess);//0
+	return (DWORD)NtUserQueryWindow(hwnd, WindowThread);//2
+}
+\end{lstlisting}
+
+\subsubsection{NtSetDebugFilterState}
+ScyllaHide returns STATUS\_ACCESS\_DENIED unless the process has debug privileges enabled. If the process has debug privileges, ScyllaHide will take no action and return success. This anti-debug measurement isn't used very often. Probably you will never need this option in a real world target.
+
+\subsubsection{NtClose}
+This is called with an invalid handle to detect a debugger. ScyllaHide calls \textit{NtQueryObject} to check the validity of the handle. A few protectors are using this method.
+
+\subsubsection{Remove Debug Privileges}
+If a debugger creates the process of the target, the target may have debug privileges. This is an unreliable way to detect a debugger.
+
+\subsubsection{Hardware Breakpoint Protection (DRx)}
+Hardware breakpoints can be detected/cleared with exceptions or the windows APIs \textit{NtGetContextThread/NtSetContextThread}. Enable this option only if you need it!
+
+\subsubsection{Timing}
+There are a few windows APIs to measure the time. Timing can be used to detect debuggers, because they slow down execution. Enable with care and only if you need it!
+
+\subsubsection{Raise Exception}
+\label{sec:RaiseException_section}
+It is possible to raise specific exceptions with various windows API functions (e.g. \textit{RaiseException} from kernel32.dll). The problem is that various debuggers consume various different exceptions and the exception is not returned to the application. The application can detect a debugger if there is no exception triggered. Please see the Listing for an example code.
+
+\begin{lstlisting}[language=C, caption=Raise Exception Example]
+__try
+{
+    RaiseException(0x40010006, 0, 0, 0);//DBG_PRINTEXCEPTION_C
+    MessageBox("Debugger detected");
+}
+__except(EXCEPTION_EXECUTE_HANDLER) //catch exception
+{
+    MessageBox("Debugger NOT detected");
+}
+\end{lstlisting}
+
+Examples for swallowed exceptions are:
+
+\begin{itemize}
+\item 0x4000001F STATUS\_WX86\_BREAKPOINT
+\item 0x40010006 DBG\_PRINTEXCEPTION\_C
+\item 0x40010007 DBG\_RIPEXCEPTION
+\item 0x80000001 STATUS\_GUARD\_PAGE\_VIOLATION
+\item 0x80000003 STATUS\_BREAKPOINT
+\item 0xC0000025 STATUS\_NONCONTINUABLE\_EXCEPTION
+\item 0xC0000420 STATUS\_ASSERTION\_FAILURE
+\end{itemize}
+
+\begin{table}[H]
+\caption{OllyDbg v1, v2 and WinDbg v6 comparision on Windows 7 64-bit.}
+\begin{tabular}{lrcccl}
+ & \multicolumn{1}{c}{} & \textbf{Olly v1}    & \textbf{Olly v2}    & \textbf{WinDbg v6}    &  \\
+ & \textbf{DBG\_RIPEXCEPTION}     & X                    & X                    & X                    &  \\
+ & \textbf{DBG\_PRINTEXCEPTION\_C}      & X                    & X                    & X                    &  \\
+ & \textbf{NONCONTINUABLE\_EXCEPTION}      & X                    & X                    &                     &  \\
+ & \textbf{WX86\_BREAKPOINT}      & X                    &                     &                     &  \\
+ & \textbf{GUARD\_PAGE\_VIOLATION}      & X                    &                     &                     &  \\
+ & \textbf{BREAKPOINT}      & X                    &                     &                     &  \\
+ & \textbf{ASSERTION\_FAILURE}      &                     &                     & X                    &  \\
+ & \multicolumn{1}{l}{} & \multicolumn{1}{l}{} & \multicolumn{1}{l}{} & \multicolumn{1}{l}{} & 
+\end{tabular}
+\end{table}
+
+\subsection{Special}
+\subsubsection{DLL Injection}
+Normal DLL injection or stealth dll injection. You better try the normal injection first...
+
+\pagebreak
+
+\subsubsection{Prevent Thread Creation}
+This option prevents the creation of new threads. This can be useful if a protector uses a lot of protection threads. This option can be useful for EXECryptor. Enable with care and only if you need it! You must know what you are doing here!
+
+\subsubsection{RunPE Unpacker}
+This option hooks \textit{NtResumeThread}. If the malware creates a new process, ScyllaHide terminates and dumps any newly created process. If you are unpacking malware, enable and try it. Should only be used inside a Virtual Machine.
+
+A typical RunPE workflow:
+
+\begin{enumerate}
+\item Create a new process of any target in suspended state (process flag CREATE\_SUSPENDED: 0x00000004)
+\item Replace the original process PE image with a new (malicious) PE image. This can involve several steps and various windows API functions.
+\item Start the process with the Windows API function \textit{ResumeThread} (or \textit{NtResumeThread}).
+\end{enumerate}
+
+\subsubsection{Improved Attach Dialog}
+Use the integrated window finder to quickly select your attach target. Drag'n'Drop the bullseye/crosshair to your target window or enter the Process ID manually in decimal or hexadecimal notation.
+\begin{figure}[H]
+\centering
+\includegraphics[scale=1]{newattachdialog.PNG}
+\caption{Improved Attach Dialog}
+\end{figure}
+
+\subsection{OllyDbg v1 Specific}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=1]{ollyv1plugin.PNG}
+\caption{OllyDbg v1 Plugin}
+\end{figure}
+
+\subsubsection{Remove entry point breakpoint}
+Some protectors use Thread-Local-Storage (TLS) as entrypoint and check for breakpoints at the normal PE entrypoint address. You must remove the PE entrypoint to hide your debugger. This option is necessary for VMProtect.
+
+\pagebreak
+
+\subsubsection{Fix Olly Bugs}
+This option fixes various OllyDbg bugs: 
+\begin{itemize}
+\item PE fix for NumOfRvaAndSizes
+\item ForegroundWindow fix
+\item FPU bug
+\item Format string (sprintf) bug, CVE-2004-0733 \url{http://www.cvedetails.com/cve/CVE-2004-0733/}
+\item NT Symbols path bug, patch by blabberer \url{http://www.woodmann.com/forum/showthread.php?8460-Debug-symbols-information-symbol-server-setup&p=56246&viewfull=1#post56246}
+\item Faulty handle bug. Sometimes Olly does not terminate and this error appears "Operating system reports error ERROR\_ACCESS\_DENIED"
+\item System DLL detection on Windows x64. Olly thinks that the system dlls are located at C:\textbackslash{}windows\textbackslash{}system32 but on Windows x64 they are at C:\textbackslash{}windows\textbackslash{}SysWOW64. The result is that various Olly features will not work properly for example "Execute till user code".
+\end{itemize}
+
+\subsubsection{x64 single-step fix}
+OllyDbg doesn't work very well on x64 operating systems. This option fixes the most annoying bug. More information here: \url{http://waleedassar.blogspot.de/2012/03/ollydbg-v110-and-wow64.html}
+\subsubsection{Skip Entrypoint outside code}
+Annoying warning can be skipped.
+\subsubsection{Ignore bad PE image}
+Annoying warning can be skipped.
+\subsubsection{Skip compressed code warning}
+Annoying warning "Compressed code?" can be skipped with a default behaviour.
+\subsubsection{Skip "load dll" warning}
+Annoying warning "Request to load DLL" can be skipped with a default behaviour.
+\subsubsection{Break on TLS}
+This option sets a breakpoint on any available Thread-Local-Storage (TLS) address. This is necessary for various protectors e.g. VMProtect.
+\subsubsection{Advanced CTRL+G}
+Replaces the default OllyDbg "Go to Address" dialog. Now you can enter RVA and offset values. Be sure to select the correct module.
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=1]{ollyadvancedctrlg.PNG}
+\caption{Advanced CTRL+G}
+\end{figure}
+
+\subsubsection{Change window caption}
+Changes the OllyDbg window caption. This can be useful against e.g. FindWindow anti-debug tricks. You don't need to enable this, if you have the NtUser* hooks enabled! Hint: You can use it to make the currently used profile visible.
+
+\subsubsection{Special Keyboard Shortcuts}
+
+\begin{itemize}
+\item "INSERT" will fill the selected data with 0x00 bytes
+\item "DELETE" will fill the selected data with 0x90 (NOP) bytes
+\end{itemize}
+
+\subsubsection{Custom Toolbar}
+This setting displays a custom toolbar while using the dump and cpu window.
+
+
+\subsubsection{Exception Problem}
+OllyDbg has a problem with several exceptions. The exceptions can be triggered in different ways. They cannot be ignored with the exception options.
+
+\begin{itemize}
+\item 0x40010006 STATUS\_ILLEGAL\_INSTRUCTION
+\item 0xC000001E STATUS\_INVALID\_LOCK\_SEQUENCE
+\end{itemize}
+
+For example, EXECryptor uses STATUS\_INVALID\_LOCK\_SEQUENCE to defeat OllyDbg. Obsidium uses STATUS\_ILLEGAL\_INSTRUCTION.
+
+\subsubsection{Detach Process}
+Olly v1 does not support detaching from a process. ScyllaHide implements a "detach process" feature. All user software breakpoints will be cleared prior to detaching the process. Olly is terminated, but the process will be alive.
+
+
+\subsection{OllyDbg v2 Specific}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=1]{ollyv2plugin.PNG}
+\caption{OllyDbg v2 Plugin}
+\end{figure}
+
+\subsubsection{Change window caption}
+Changes the OllyDbg window caption. This can be useful against e.g. FindWindow anti-debug tricks. You don't need to enable this, if you have the NtUser* hooks enabled! Hint: You can use it to make the currently used profile visible.
+
+\subsection{IDA Specific}
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=1]{idaplugin.PNG}
+\caption{IDA Plugin}
+\end{figure}
+
+\subsubsection{Server Option}
+Remote debugging is fully supported. Define the TCP port for the special IDA Server application. X64 debugging requires remote debugging, because IDA (64-bit) is a 32-bit application.
+
+% Matti: commented out because these sections were empty.
+% Uncomment these if there is x64dbg or TE-specific info to add
+%\subsection{x64dbg Specific}
+%\subsection{TitanEngine Specific}
+
+% Matti: force page break here because the section title was on a different page than the rest
+\pagebreak
+
+\section{Advanced Information}
+\subsection{Nt* APIs from user32.dll}
+
+\begin{lstlisting}[language=C, caption=Special Nt* APIs declaration]
+BOOL
+NTAPI
+NtUserBlockInput(
+    IN BOOL fBlockIt);
+
+HWND
+NTAPI
+NtUserFindWindowEx(
+    IN HWND hwndParent,
+    IN HWND hwndChild,
+    IN PUNICODE_STRING pstrClassName OPTIONAL,
+    IN PUNICODE_STRING pstrWindowName OPTIONAL,
+    IN DWORD dwType);
+
+NTSTATUS
+NTAPI
+NtUserBuildHwndList(
+    IN HDESK hdesk,
+    IN HWND hwndNext,
+    IN BOOL fEnumChildren,
+    IN DWORD idThread,
+    IN UINT cHwndMax,
+    OUT HWND *phwndFirst,
+    OUT PUINT pcHwndNeeded);
+
+HANDLE
+NTAPI
+NtUserQueryWindow(
+    IN HWND hwnd,
+    IN WINDOWINFOCLASS WindowInfo);
+\end{lstlisting}
+
+\subsection{Special PEB Fix Information}
+
+There is a special piece of code inside the debug loop of the plugins and it seems like there is a bug:
+\begin{lstlisting}[language=C, caption=Special PEB Fix Code]
+    if (pHideOptions.PEBHeapFlags)
+    {
+        if (specialPebFix)
+        {
+            StartFixBeingDebugged(ProcessId, false);
+            specialPebFix = false;
+        }
+
+        if (debugevent->u.LoadDll.lpBaseOfDll == hNtdllModule)
+        {
+            StartFixBeingDebugged(ProcessId, true);
+            specialPebFix = true;
+        }
+    }
+\end{lstlisting}
+But this code is correct and very important. This nice trick removes heap artifacts (You can read more about it here: \url{http://pferrie.tripod.com/papers/unpackers.pdf} "The heap"). Themida and other protectors check for heap artifacts. Instead of manually wiping the artifacts, the code prevents the heap artifact creation.
+
+\section{Developer Contact Information}
+
+\begin{center}
+\textbf{Carbon} \textit{alias} \textbf{Aguila} \textit{alias} \textbf{NtQuery}
+\begin{itemize}
+\item \url{https://github.com/NtQuery/}
+\item \url{https://bitbucket.org/NtQuery/}
+\item \url{https://forum.tuts4you.com/user/22354-aguila/}
+\item \url{https://forum.exetools.com/member.php?u=36473}
+\end{itemize}
+
+
+\textbf{cypher} \textit{alias} \textbf{cypherpunk}
+\begin{itemize}
+\item \url{https://bitbucket.org/cypherpunk/}
+\item \url{https://forum.tuts4you.com/user/77269-cypher/}
+\item \url{https://forum.exetools.com/member.php?u=36610}
+\end{itemize}
+
+\textbf{mrexodia}
+\begin{itemize}
+\item \url{https://github.com/mrexodia/}
+\item \url{https://bitbucket.org/mrexodia/}
+\item \url{https://forum.tuts4you.com/profile/54652-mrexodia/}
+\end{itemize}
+
+\textbf{Mattiwatti}
+\begin{itemize}
+\item \url{https://github.com/Mattiwatti/}
+\item \url{https://bitbucket.org/Mattiwatti/}
+\item \url{https://forum.tuts4you.com/profile/93562-mattiwatti/}
+\end{itemize}
+\end{center}
+
+\section{Version History}
+
+Version 1.4
+\begin{itemize}
+\item Fixed bug with PEB heap flags, bug found by kao \url{http://lifeinhex.com/net-scyllahide-and-heap_create_enable_execute/}
+\item All Plugins: Cool ghost icon
+\item Olly v1 Plugin: Fix bug - system dll detection
+\item Olly v1 Plugin: Detach from process feature
+\end{itemize}
+
+Version 1.3
+\begin{itemize}
+\item All Plugins: Improved tooltips
+\item All Plugins: Bugfixes
+\item All Plugins: Don't swallow exceptions like DBG\_RIPEXCEPTION or DBG\_PRINTEXCEPTION\_C
+\item Olly v1 Plugin: Custom Toolbar for Dump and CPU window
+\item Olly v1 Plugin: Special shortcuts
+\end{itemize}
+
+Version 1.2
+\begin{itemize}
+\item All Plugins: New attach dialog with crosshair/bullseye window finder.
+\item All Plugins: Tooltips with information (unfinished).
+\item Olly v1 Plugin: Fix for NT Symbols path
+\item Olly v1 Plugin: Fix for faulty handle bug
+\end{itemize}
+
+Version 1.1
+\begin{itemize}
+\item Added "thanks" to About
+\item Added kill anti-attach (for x86 only)
+\item Olly v1 Plugin: Advanced CTRL+G
+\item Olly v1 Plugin: Skip "compressed code" message
+\item Olly v1 Plugin: Ignore bad PE image (WinUPack)
+\item Olly v1 Plugin: Skip "Load DLL" message
+\end{itemize}
+
+\include{gpl-3.0}
+
+\end{document}

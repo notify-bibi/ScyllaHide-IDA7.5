@@ -1,0 +1,93 @@
+Version 1.x
+- All Plugins: Patch PEB64 under Wow64.
+- All Plugins: Patch Flags in RTL_USER_PROCESS_PARAMETERS.
+- Application for testing ScyllaHide features.
+
+Version 1.3
+- IDA Plugin: Removed attaching support due to IDA SDK bugs
+- Other Plugins: Improved Anti-Anti-Attach + 64bit support
+
+Version 1.2
+- All Plugins: New attach dialog with crosshair/bullseye window finder.
+- All Plugins: Tooltips with information (unfinished).
+- Olly v1 Plugin: Fix for faulty handle bug
+- Olly v1 Plugin: Fix for NT symbol path bug added to "Fix Olly Bugs", thanks to redblkjck 
+
+Version 1.1
+- Added "thanks" to About
+- Added kill anti-attach (for x86 only)
+- Olly v1 Plugin: Advanced CTRL+G
+- Olly v1 Plugin: Skip "compressed code" message
+- Olly v1 Plugin: Ignore bad PE image (WinUPack)
+- Olly v1 Plugin: Skip "Load DLL" message
+
+Version 1.0
+
+- added sprintf %s Olly1 bugfix to "Fix Olly bugs"
+- x64dbg 32/64bit plugins https://github.com/x64dbg/x64dbg
+- fixed alignment bug 64bit
+
+Version 0.9
+
+- All plugins use separate scylla_hide.ini now. ini is interchangeable between plugins !
+  (ini section in ollydbg.ini now deprecated !)
+- Load/Save ini profiles in Olly1&2 and IDA plugin
+- RunPE malware unpacker
+- NtSetInformationProcess Hook in GUI
+
+Version 0.8
+
+- Olly v1 Plugin: option "Skip EP outside of code message"
+- Fix for NtSetInformationProcess -> ProcessHandleTracing
+- All plugins: Update-Check
+- Timing Hooks: GetTickCount, GetTickCount64, GetLocalTime, GetSystemTime, NtQuerySystemTime, NtQueryPerformanceCounter
+- "Remove Debug Privileges" added 
+
+Version 0.7
+
+- IDA 64bit plugin
+- IDA 32/64bit remote server
+- IDA DLL Injection
+- IDA option to start x64 server automatically
+
+Version 0.6
+
+- IDA 32bit plugin
+
+Version 0.5
+
+- NtCreateThreadEx hook
+- Prevent Thread creation 
+  (special hook for some protectors like Execryptor. Only use this if you know what you do)
+- Split Hide PEB into 4 options (ini option PEB now deprecated)
+- Inject DLL option added (2 methods)
+- Replaced Olly2 dialog
+- Improved "Break on TLS"
+
+Version 0.4
+
+- Olly v1/v2 Plugins: Apply hooks without restarting
+- Olly v1 Plugin: Added "Break on TLS"
+
+Version 0.3
+
+- Fix for Olly plugins caption reset
+- Fix STARTUPINFO structure, GetStartupInfoA/W
+- Resume/Suspend all Threads in Thread window
+- x64 compatibility mode for Olly1
+- fix PE-Bugs for Olly1
+- fix FPU-Bug for Olly1
+- split "Protect DRx" into its options (ini option ProtectDRx now deprecated)
+- Fix PEB Patch bug, now Themida works on WinXP
+
+Version 0.2
+
+Warning: Since this version, ScyllaHide is not compatbile with Stealth64! You need to remove the Stealth64 plugin.
+
+- Stealth hooks for 32-bit targets to defeat protectors like Themida
+- Olly Plugin: Change olly caption
+- Olly v1 Plugin: Remove EP One-Shot Breakpoint for VMProtect
+
+Version 0.1
+
+- Init
